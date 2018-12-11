@@ -4,7 +4,7 @@
 
 #include <fstream>
 #include <vector>
-#include <math.h>
+#include <cmath>
 
 int dist(std::pair<int, int>& v1, std::pair<int, int>& v2)
 {
@@ -14,10 +14,10 @@ int dist(std::pair<int, int>& v1, std::pair<int, int>& v2)
 int main()
 {
     std::fstream in;
-    in.open("../input/Taxicab_100.txt");
+    in.open("../input/input.txt");
     int n;
     std::vector<std::pair<int, int>> v;
-    std::vector<std::vector<std::pair<int, int>>> sectors_ind_v__cost;
+    std::vector<std::vector<std::pair<int, int>>> sectors_ind_v__dist;
 
     std::pair<int, int> p_min, p_max, p_center;
 //    ... чтение графа ...
@@ -53,14 +53,14 @@ int main()
     p_center.second = (p_min.second - p_max.second) / 2;
 
     int min_dist = dist(v[0], p_center);
-    std::pair<int, int> v_center = v[0];
+    int ind_v_center = 0;
 
-    for(auto &i : v)
+    for(int i = 1; i < v.size(); i++)
     {
-        if(dist(i, p_center) < min_dist)
+        if(dist(v[i], p_center) < min_dist)
         {
-            min_dist = dist(i, p_center);
-            v_center = i;
+            min_dist = dist(v[i], p_center);
+            ind_v_center = i;
         }
     }
 
@@ -70,21 +70,39 @@ int main()
         l <<= 1;
     }
     l >>= 1;
-    sectors_ind_v__cost.resize(static_cast<unsigned long>(l));
+    sectors_ind_v__dist.resize(static_cast<unsigned long>(l));
 
     double phi_sector = 2*M_PI/l;
 
     for(int i = 0; i < n; i++)
     {
-        int x = v[i].first - v_center.first, y = v[i].second - v_center.second;
+        if(i == ind_v_center)
+            continue;
         double phi_v;
-        if(y < 0)
-            phi_v = std::atan(double(y) / double(x));
+        int x = v[i].first - v[ind_v_center].first, y = v[i].second - v[ind_v_center].second;
+        if(x == 0)
+        {
+            if(y > 0)
+                phi_v = M_PI/2;
+            else
+                phi_v = 3*M_PI/2;
+        }
         else
-            phi_v = std::atan(double(y) / double(x)) + M_PI;
-        int ind_sector = static_cast<int>(phi_v / phi_sector);
-        sectors_ind_v__cost[ind_sector].push_back(std::pair<int, int>(i, dist(v[i], v_center)));
+            if(x < 0) {
+                phi_v = std::atan(double(y) / double(x)) + M_PI;
+            }
+            else {
+                phi_v = std::atan(double(y) / double(x));
+            }
+        if(phi_v < 0)
+        {
+            phi_v += M_PI*2;
+        }
+        auto ind_sector = static_cast<int>(phi_v / phi_sector);
+        sectors_ind_v__dist[ind_sector].push_back(std::pair<int, int>(i, dist(v[i], v[ind_v_center])));
     }
+
+
 
     return 0;
 }
