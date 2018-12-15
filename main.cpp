@@ -7,9 +7,16 @@
 #include <cmath>
 #include <algorithm>
 
+int cost = 0;
 std::vector<std::pair<int, int>> v;
-std::vector<std::vector<std::pair<int, int>>> sectors_dist_ind_v;
-std::vector<std::pair<int, std::pair<int, int>>> rib_cost_ind_v1_v2;
+/**
+ * pair<dist, ind_v>
+ */
+std::vector<std::vector<std::pair<int, int>>> sectors;
+/**
+ pair<cost, pair<ind_v1, ind_v2>
+ */
+std::vector<std::pair<int, std::pair<int, int>>> ribs;
 
 int dist(std::pair<int, int>& v1, std::pair<int, int>& v2)
 {
@@ -18,18 +25,18 @@ int dist(std::pair<int, int>& v1, std::pair<int, int>& v2)
 
 void add_rib(int& ind_v1, int& ind_v2)
 {
-    rib_cost_ind_v1_v2.emplace_back();
-    rib_cost_ind_v1_v2.back().second.first = ind_v1;
-    rib_cost_ind_v1_v2.back().second.second = ind_v2;
-    rib_cost_ind_v1_v2.back().first = dist(v[ind_v1], v[ind_v2]);
-
+    ribs.emplace_back();
+    ribs.back().second.first = ind_v1;
+    ribs.back().second.second = ind_v2;
+    ribs.back().first = dist(v[ind_v1], v[ind_v2]);
+    cost += ribs.back().first;
 }
 
 int move_last_v_from_sector(int init_ind_v, int ind_sector)
 {
-    int result = sectors_dist_ind_v[ind_sector].back().second;
-    add_rib(init_ind_v, sectors_dist_ind_v[ind_sector].back().second);
-    sectors_dist_ind_v[ind_sector].pop_back();
+    int result = sectors[ind_sector].back().second;
+    add_rib(init_ind_v, sectors[ind_sector].back().second);
+    sectors[ind_sector].pop_back();
     return result;
 }
 
@@ -37,18 +44,17 @@ void f(int init_ind_v, int ind_begin_sector, int ind_end_sector) {
     if (ind_begin_sector == ind_end_sector)
     {
         int pred_ind = init_ind_v;
-        for(unsigned long i = sectors_dist_ind_v[ind_begin_sector].size() - 1; i != 0; i--)
+        while(!sectors[ind_begin_sector].empty())
         {
-            move_last_v_from_sector(pred_ind, ind_begin_sector);
-            pred_ind = sectors_dist_ind_v[ind_begin_sector][i].second;
+            pred_ind = move_last_v_from_sector(pred_ind, ind_begin_sector);
         }
         return;
     }
     int ind_sector_min = ind_end_sector;
     for(int i = ind_begin_sector; i < ind_end_sector; i++)
     {
-        if(dist(v[init_ind_v], v[sectors_dist_ind_v[i].back().second])
-        < dist(v[init_ind_v], v[sectors_dist_ind_v[ind_sector_min].back().second]))
+        if(dist(v[init_ind_v], v[sectors[i].back().second])
+        < dist(v[init_ind_v], v[sectors[ind_sector_min].back().second]))
             ind_sector_min = i;
     }
 
@@ -63,7 +69,8 @@ void f(int init_ind_v, int ind_begin_sector, int ind_end_sector) {
 int main()
 {
     std::fstream in;
-    in.open("../input/input.txt");
+//    in.open("../input/Taxicab_2018.txt");
+    in.open("../input/Taxicab_2018.txt");
     int n;
 
     std::pair<int, int> p_min, p_max, p_center;
@@ -117,15 +124,15 @@ int main()
         l <<= 1;
     }
     l >>= 1;
-    sectors_dist_ind_v.resize(static_cast<unsigned long>(l));
+    sectors.resize(static_cast<unsigned long>(l));
 
     double phi_sector = 2*M_PI/l;
 
 //    debug
-    l = 8;
-    sectors_dist_ind_v.clear();
-    sectors_dist_ind_v.resize(static_cast<unsigned long>(l));
-    phi_sector = 2*M_PI/l;
+//    l = 8;
+//    sectors.clear();
+//    sectors.resize(static_cast<unsigned long>(l));
+//    phi_sector = 2*M_PI/l;
 //--------------
     for(int i = 0; i < n; i++)
     {
@@ -152,15 +159,31 @@ int main()
             phi_v += M_PI*2;
         }
         auto ind_sector = static_cast<int>(phi_v / phi_sector);
-        sectors_dist_ind_v[ind_sector].push_back(std::pair<int, int>(dist(v[i], v[ind_v_center]), i));
+        sectors[ind_sector].push_back(std::pair<int, int>(dist(v[i], v[ind_v_center]), i));
     }
 
-    for(auto &sector : sectors_dist_ind_v)
+    for(auto &sector : sectors)
     {
         std::sort(sector.rbegin(), sector.rend());
     }
+//debug
+//    f(ind_v_center, 0, (l - 1)/2);
+//    f(ind_v_center, (l - 1)/2+1, l - 1);
+//------------------
+    int step_tree = l/3;
+    for(int i = 0; i < l; i += step_tree)
+    {
+        f(ind_v_center, i, i + step_tree - 1);
+    }
 
-
+    std::fstream result("../result_2018.txt");
+    result << "c Вес дерева = " << cost << ", число листьев = " << l << ',' << std::endl;
+    result << "c число вершин и ребер" << std::endl;
+    result << "p edge " << n << ' ' << ribs.size() << std::endl;
+    result << "c ребра" << std::endl;
+    for (auto &rib : ribs) {
+        result << "e " << rib.second.first+1 << ' ' << rib.second.second+1 << std::endl;
+    }
 
     return 0;
 }
